@@ -1,5 +1,5 @@
 /**
- * @file Weather utilities for geocoding and current forecast using Open-Meteo.
+ * Weather service: geocoding and current forecast using Open-Meteo.
  * All functions use the built-in fetch available in Node.js >= 18.
  */
 
@@ -9,7 +9,7 @@ export type TodayWeather = {
   latitude: number;
   longitude: number;
   timezone: string;
-  updatedAt: string; // ISO timestamp
+  updatedAt: string;
   tmaxC: number | null;
   tminC: number | null;
   precipitationMm: number | null;
@@ -17,22 +17,13 @@ export type TodayWeather = {
   weatherText: string | null;
 };
 
-/**
- * Error thrown when a given city cannot be geocoded.
- */
 export class CityNotFoundError extends Error {
-  /**
-   * @param city The city that could not be found
-   */
   constructor(public readonly city: string) {
     super(`City not found: ${city}`);
     this.name = "CityNotFoundError";
   }
 }
 
-/**
- * Error thrown when a downstream network call fails.
- */
 export class DownstreamError extends Error {
   constructor(message: string) {
     super(message);
@@ -40,11 +31,6 @@ export class DownstreamError extends Error {
   }
 }
 
-/**
- * Sanitize a city name: trim and enforce a reasonable length.
- * @param rawCity Raw city input
- * @returns Sanitized city string
- */
 export function sanitizeCity(rawCity: string): string {
   const trimmed = rawCity.trim();
   if (trimmed.length < 2 || trimmed.length > 80) {
@@ -53,11 +39,6 @@ export function sanitizeCity(rawCity: string): string {
   return trimmed;
 }
 
-/**
- * Geocode a city using the Open-Meteo geocoding API.
- * @param city City name to geocode (will be sanitized)
- * @returns The first geocoding result or throws CityNotFoundError
- */
 export async function geocodeCity(city: string): Promise<{
   name: string;
   country: string | null;
@@ -96,12 +77,6 @@ export async function geocodeCity(city: string): Promise<{
   };
 }
 
-/**
- * Map Open-Meteo weather code to human-readable description.
- * Source: https://open-meteo.com/en/docs#weathervariables
- * @param code Open-Meteo weather code
- * @returns English description for the code
- */
 export function weatherCodeToText(
   code: number | null | undefined
 ): string | null {
@@ -139,11 +114,6 @@ export function weatherCodeToText(
   return mapping[code] ?? "Unknown";
 }
 
-/**
- * Get today's weather summary using Open-Meteo current weather and daily aggregates.
- * @param city City name to fetch weather for (will be sanitized then geocoded)
- * @returns TodayWeather object
- */
 export async function getTodayWeather(city: string): Promise<TodayWeather> {
   const geo = await geocodeCity(city);
 
@@ -165,7 +135,6 @@ export async function getTodayWeather(city: string): Promise<TodayWeather> {
     throw new DownstreamError("Failed to reach Open-Meteo forecast API");
   }
   const latencyMs = Date.now() - start;
-  // Minimal logging for latency; in production, replace with proper logger
   // eslint-disable-next-line no-console
   console.log(`[open-meteo] forecast latency ${latencyMs}ms for ${geo.name}`);
 

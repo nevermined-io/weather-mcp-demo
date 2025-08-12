@@ -1,6 +1,8 @@
 /**
  * @file Minimal MCP client to test the streamable HTTP server.
  */
+import dotenv from "dotenv";
+dotenv.config();
 
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -14,11 +16,20 @@ async function main() {
   const nvmApiKey = process.env.NVM_API_KEY;
   const environment = (process.env.NVM_ENV || "staging_sandbox") as any;
 
+  const payments = nvmApiKey
+    ? Payments.getInstance({ nvmApiKey, environment })
+    : undefined;
+
   let authHeader: string | undefined;
-  if (nvmApiKey && planId && agentId) {
-    const payments = Payments.getInstance({ nvmApiKey, environment });
+  let beforeBalance: bigint | undefined;
+  if (payments && planId && agentId) {
     const creds = await payments.agents.getAgentAccessToken(planId, agentId);
     authHeader = `Bearer ${creds.accessToken}`;
+    try {
+      const bal = await payments.plans.getPlanBalance(planId);
+      beforeBalance = BigInt(bal.balance || 0);
+      console.log(`Before balance: ${beforeBalance.toString()}`);
+    } catch {}
   }
 
   const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
@@ -43,15 +54,27 @@ async function main() {
   // Call weather.today
   console.log(`\nCalling weather.today for city: ${city}`);
   const result = await client.callTool({
-    name: "weather.today",
+    name: process.env.RAW ? "weather.today.raw" : "weather.today",
     arguments: { city },
   });
 
-  // Print the first element of result.content, handling unknown type safely
-  if (Array.isArray(result.content) && result.content.length > 0) {
-    console.log("Tool result content[0]:", JSON.stringify(result.content[0]));
-  } else {
-    console.log("Tool result content[0]: No content returned.");
+  if ((result as any)?.isError || (result as any)?.error) {
+    console.error("Tool error:", JSON.stringify(result, null, 2));
+  }
+
+  // Print text content if present
+  if (Array.isArray(result.content)) {
+    const textItem = result.content.find(
+      (c: any) => c && typeof c === "object" && c.type === "text"
+    ) as { type: "text"; text: string } | undefined;
+    if (textItem)
+      console.log(
+        "Tool text:",
+        typeof textItem.text === "string"
+          ? textItem.text
+          : JSON.stringify(textItem.text)
+      );
+    else console.log("Tool: no text content returned");
   }
 
   /**
@@ -71,7 +94,33 @@ async function main() {
 
   if (link) {
     const res = await client.readResource({ uri: link.uri });
-    console.log("\nResource read:", res);
+    console.log("\nResource read uri:", link.uri);
+    const first = Array.isArray(res.contents) ? res.contents[0] : undefined;
+    if (first?.text) console.log("Resource JSON:", first.text);
+  }
+
+  // Try direct resource read as well to validate credits burn in resource handler
+  try {
+    const directUri = `weather://today/${encodeURIComponent(city)}`;
+    const res2 = await client.readResource({ uri: directUri });
+    const first2 = Array.isArray(res2.contents) ? res2.contents[0] : undefined;
+    console.log("Direct resource read uri:", directUri);
+    if (first2?.text) console.log("Direct Resource JSON:", first2.text);
+  } catch (e) {
+    console.error("Direct resource read error:", e);
+  }
+
+  // After balances
+  if (payments && planId) {
+    try {
+      const after = await payments.plans.getPlanBalance(planId);
+      const afterBalance = BigInt(after.balance || 0);
+      console.log(`After balance: ${afterBalance.toString()}`);
+      if (beforeBalance !== undefined) {
+        const delta = beforeBalance - afterBalance;
+        console.log(`Credits burned (approx): ${delta.toString()}`);
+      }
+    } catch {}
   }
 
   await client.close();

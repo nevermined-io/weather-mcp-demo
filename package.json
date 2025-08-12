@@ -5,9 +5,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "node dist/main.js",
     "client": "tsx src/client-demo.ts",
     "client:invalid": "tsx src/client-test-invalid.ts",
     "inspector": "yarn dlx @modelcontextprotocol/inspector connect http://localhost:3000/mcp"
