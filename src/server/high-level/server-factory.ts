@@ -1,33 +1,29 @@
 /**
- * Server factory to build a pre-configured MCP server (tools/resources/prompts registered)
+ * Server factory to build a pre-configured MCP server (High-Level)
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { EnvironmentName, Payments } from "@nevermined-io/payments";
-import { ServerConfig } from "../config/server-config.js";
-import { EnvironmentConfig } from "../config/environment.js";
+import { ServerConfig } from "../../config/server-config.js";
+import { EnvironmentConfig } from "../../config/environment.js";
 import {
   weatherToolHandler,
   weatherToolConfig,
   weatherToolCreditsCalculator,
-} from "./handlers/weather-tool.handler.js";
+} from "../../mcp/handlers/weather-tool.handler.js";
 import {
   createWeatherResourceTemplate,
   weatherResourceConfig,
   weatherResourceHandler,
-} from "./handlers/weather-resource.handler.js";
+} from "../../mcp/handlers/weather-resource.handler.js";
 import {
   weatherPromptHandler,
   weatherPromptConfig,
-} from "./handlers/weather-prompt.handler.js";
+} from "../../mcp/handlers/weather-prompt.handler.js";
 
-/**
- * Build a server creator function once at startup, and use it per-session to get a new MCP server instance.
- */
-export function buildWeatherServerFactory(
+export function buildHighLevelServerFactory(
   serverConfig: ServerConfig,
   envConfig: EnvironmentConfig
 ) {
-  // Pre-create Payments client and configure MCP paywall once
   const payments = Payments.getInstance({
     nvmApiKey: envConfig.nvmApiKey,
     environment: envConfig.nvmEnvironment as EnvironmentName,
@@ -45,7 +41,6 @@ export function buildWeatherServerFactory(
       version: serverConfig.version,
     });
 
-    // Protected tool with paywall
     const protectedWeatherHandler = payments.mcp.withPaywall(
       weatherToolHandler,
       {
@@ -60,7 +55,6 @@ export function buildWeatherServerFactory(
       protectedWeatherHandler
     );
 
-    // Protected resource, alternative calling with attach()
     const { registerResource } = payments.mcp.attach(server);
     registerResource(
       "weather.today",
@@ -70,7 +64,6 @@ export function buildWeatherServerFactory(
       { credits: weatherToolCreditsCalculator }
     );
 
-    // Protected prompt with paywall (0 credits by default)
     const protectedPromptHandler = payments.mcp.withPaywall(
       weatherPromptHandler,
       {

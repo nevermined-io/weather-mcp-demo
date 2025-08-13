@@ -1,9 +1,9 @@
 /**
- * Session management for MCP transports
+ * Session management for MCP transports (High-Level: Streamable HTTP)
  */
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { ServerConfig } from "../config/server-config.js";
+import { ServerConfig } from "../../config/server-config.js";
 
 /**
  * Manages MCP transport sessions

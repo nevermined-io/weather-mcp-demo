@@ -1,6 +1,6 @@
-## Weather MCP (Streamable HTTP, TypeScript)
+## Weather MCP (High-Level and Low-Level servers)
 
-Minimal MCP server exposing a `weather.today(city)` tool, a `weather://today/{city}` resource and a `weather.ensureCity` prompt. Ready for future Nevermined Authorization integration.
+Minimal MCP server exposing a `weather.today(city)` tool, a `weather://today/{city}` resource and a `weather.ensureCity` prompt. Includes both a High-Level server (SDK `McpServer` + Streamable HTTP) and a Low-Level server (manual JSON‑RPC routing) to demonstrate Nevermined Payments integration.
 
 ### Requirements
 
@@ -31,7 +31,7 @@ yarn build
 yarn start
 ```
 
-### Client demo
+### Client demo (High-Level)
 
 ```bash
 # default city Madrid
@@ -39,9 +39,19 @@ yarn client
 
 # custom city
 yarn client Paris
+### Client demo (Low-Level)
+
+```bash
+# default city Madrid
+yarn tsx src/client-low-level.ts
+
+# custom city
+yarn tsx src/client-low-level.ts Paris
 ```
 
-### Nevermined auth (initial integration)
+```
+
+### Nevermined auth
 
 Client obtains an access token with its `NVM_API_KEY` and sends it as `Authorization: Bearer ...`. The server requires `Authorization` and performs a lightweight validation (custom JSON‑RPC error `-32003` if unauthorized).
 
@@ -66,6 +76,14 @@ yarn client Madrid
 
 If auth is missing/invalid, the tool returns a JSON‑RPC error with code `-32003`.
 
+Low-Level client env:
+
+```bash
+export MCP_LOW_ENDPOINT=http://localhost:3000/mcp-low
+export NVM_API_KEY=...
+yarn tsx src/client-low-level.ts Madrid
+```
+
 ### MCP Inspector (over HTTP)
 
 ```bash
@@ -79,12 +97,17 @@ This runs `yarn dlx @modelcontextprotocol/inspector connect http://localhost:300
 - `PORT` (default 3000)
 - `ALLOWED_HOSTS` for DNS-rebind protection (default `127.0.0.1,localhost`)
 
-### Endpoints
+### Endpoints (High-Level)
 
 - `POST /mcp` — JSON-RPC requests (initialize handled here; server-side sessions)
 - `GET /mcp` — SSE stream for server notifications
 - `DELETE /mcp` — session termination
 - `GET /healthz` — simple health check
+
+### Endpoints (Low-Level)
+
+- `POST /mcp-low` — Minimal JSON-RPC with manual routing and Authorization header passthrough
+- `GET /healthz-low` — simple health check
 
 ### Acceptance checklist
 
@@ -130,7 +153,7 @@ const payments = Payments.getInstance({ nvmApiKey, environment })
 payments.mcp.configure({ agentId: process.env.NVM_AGENT_ID!, serverName: 'my-mcp' })
 ```
 
-### 3) Wrap your tool handler with the paywall
+### 3) Wrap your tool handler with the paywall (works in both servers)
 
 ```ts
 // Your original tool handler
@@ -142,7 +165,11 @@ async function myHandler(args: any) {
 // Protect it with paywall (single call). Burn 1 credit per call
 const protectedHandler = payments.mcp.withPaywall(myHandler, { credits: 1n })
 
+// High-Level
 server.registerTool('my.namespace.tool', { inputSchema: { /* zod */ } }, protectedHandler)
+
+// Low-Level
+const tools = new Map([[ 'my.namespace.tool', protectedHandler ]])
 ```
 
 What the paywall does:

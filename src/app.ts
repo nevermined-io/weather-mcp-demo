@@ -8,9 +8,9 @@ import {
   EnvironmentConfig,
   loadEnvironmentConfig,
 } from "./config/environment.js";
-import { SessionManager } from "./transport/session-manager.js";
-import { setupMcpRoutes } from "./routes/mcp.routes.js";
-import { buildWeatherServerFactory } from "./mcp/server-factory.js";
+import { SessionManager } from "./server/high-level/session-manager.js";
+import { setupHighLevelMcpRoutes } from "./server/high-level/mcp.routes.js";
+import { buildHighLevelServerFactory } from "./server/high-level/server-factory.js";
 
 // Load environment variables
 dotenv.config();
@@ -33,7 +33,7 @@ export class WeatherMcpApp {
 
     this.setupMiddleware();
     // Build server factory once at startup
-    this.createServerInstance = buildWeatherServerFactory(
+    this.createServerInstance = buildHighLevelServerFactory(
       this.serverConfig,
       this.envConfig
     );
@@ -45,7 +45,11 @@ export class WeatherMcpApp {
   }
 
   private setupRoutes(): void {
-    setupMcpRoutes(this.app, this.sessionManager, this.createServerInstance);
+    setupHighLevelMcpRoutes(
+      this.app,
+      this.sessionManager,
+      this.createServerInstance
+    );
 
     // Health check endpoint
     this.app.get("/healthz", (_req, res) => {

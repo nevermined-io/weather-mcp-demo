@@ -23,13 +23,38 @@ async function main() {
   let authHeader: string | undefined;
   let beforeBalance: bigint | undefined;
   if (payments && planId && agentId) {
+    try {
+      let bal = await payments.plans.getPlanBalance(planId);
+      beforeBalance = BigInt(bal.balance || 0);
+      const isSubscriber = !!bal?.isSubscriber;
+      if (!isSubscriber || beforeBalance === 0n) {
+        console.log(
+          "Ordering plan because there is no balance or not subscribed..."
+        );
+        await payments.plans.orderPlan(planId);
+      } else {
+        console.log(
+          `Before balance: ${beforeBalance.toString()} (subscriber: ${isSubscriber})`
+        );
+      }
+    } catch (e) {
+      console.warn("Unable to get balance. Attempting to order plan...", e);
+      try {
+        await payments.plans.orderPlan(planId);
+        const bal = await payments.plans.getPlanBalance(planId);
+        beforeBalance = BigInt(bal.balance || 0);
+        console.log(
+          `Before balance: ${beforeBalance.toString()} (subscriber: ${
+            bal?.isSubscriber
+          })`
+        );
+      } catch (e2) {
+        console.error("Order plan failed:", e2);
+      }
+    }
+
     const creds = await payments.agents.getAgentAccessToken(planId, agentId);
     authHeader = `Bearer ${creds.accessToken}`;
-    try {
-      const bal = await payments.plans.getPlanBalance(planId);
-      beforeBalance = BigInt(bal.balance || 0);
-      console.log(`Before balance: ${beforeBalance.toString()}`);
-    } catch {}
   }
 
   const transport = new StreamableHTTPClientTransport(new URL(endpoint), {

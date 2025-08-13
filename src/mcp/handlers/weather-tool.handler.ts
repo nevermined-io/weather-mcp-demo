@@ -85,11 +85,6 @@ export async function weatherToolHandler({ city }: { city: string }) {
  * - ctx.result: handler result
  * - ctx.request: metadata (authHeader, logicalUrl, toolName)
  */
-export function weatherToolCreditsCalculator(ctx: CreditsContext): bigint {
-  const argCity = getCityFromArgs(ctx?.args);
-  if (argCity) {
-    const n = argCity.length % 10 || 1;
-    return BigInt(n);
-  }
-  return BigInt(1 + Math.floor(Math.random() * 10));
+export function weatherToolCreditsCalculator(_ctx: CreditsContext): bigint {
+  return BigInt(5 + Math.floor(Math.random() * 10));
 }
