@@ -63,9 +63,38 @@ async function main() {
     authHeader = `Bearer ${creds.accessToken}`;
   }
 
-  const payload = {
+  // 1) Initialize handshake (MCP-style)
+  const initPayload = {
     jsonrpc: "2.0",
     id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+    },
+  };
+
+  const initRes = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+    body: JSON.stringify(initPayload),
+  });
+
+  const initData = await initRes.json();
+  if ((initData as any)?.error) {
+    console.error("Initialize error:", JSON.stringify(initData, null, 2));
+    process.exit(1);
+  } else {
+    console.log("Initialized:", JSON.stringify(initData, null, 2));
+  }
+
+  // 2) Tool call
+  const payload = {
+    jsonrpc: "2.0",
+    id: 2,
     method: "tools/call",
     params: { name: "weather.today", arguments: { city } },
   };

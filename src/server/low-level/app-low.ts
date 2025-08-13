@@ -28,13 +28,11 @@ export class WeatherMcpLowLevelApp {
     this.app = express();
     this.app.use(express.json());
 
-    const { tools, resources, prompts } = buildLowLevelServerFactory(
-      this.serverConfig,
-      this.envConfig
-    );
+    const { tools, resources, prompts, authenticateMeta } =
+      buildLowLevelServerFactory(this.serverConfig, this.envConfig);
     this.app.post(
       "/mcp-low",
-      createLowLevelRouter({ tools, resources, prompts })
+      createLowLevelRouter({ tools, resources, prompts, authenticateMeta })
     );
 
     this.app.get("/healthz-low", (_req, res) =>

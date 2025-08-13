@@ -9,6 +9,7 @@ export function createLowLevelRouter(registry: {
   tools: Map<string, any>;
   resources: Map<string, any>;
   prompts: Map<string, any>;
+  authenticateMeta?: (extra: any, method: string) => Promise<any>;
 }) {
   return async function handle(req: Request, res: Response) {
     try {
@@ -27,8 +28,52 @@ export function createLowLevelRouter(registry: {
         return;
       }
 
-      // Align with high-level extra shape for maximum compatibility
+      // Gate MCP initialize and list operations requiring Authorization header
+      const gatedMethods = new Set([
+        "initialize",
+        "tools/list",
+        "resources/list",
+        "prompts/list",
+      ]);
+      const method = (body as any).method as string | undefined;
       const extra = buildExtraFromHttpRequest(req);
+      if (
+        typeof method === "string" &&
+        gatedMethods.has(method) &&
+        registry.authenticateMeta
+      ) {
+        try {
+          await registry.authenticateMeta(extra, method);
+        } catch (err: any) {
+          res.status(200).json({
+            jsonrpc: "2.0",
+            error: {
+              code: err?.code ?? -32003,
+              message: err?.message || "Payment required",
+            },
+            id: (body as any).id ?? null,
+          });
+          return;
+        }
+      }
+
+      if (body.method === "initialize") {
+        // Return a minimal initialize response compatible with MCP
+        res.json({
+          jsonrpc: "2.0",
+          id: body.id ?? null,
+          result: {
+            protocolVersion: "2024-11-05",
+            serverInfo: { name: "weather-mcp-low", version: "0.1.0" },
+            capabilities: {
+              tools: true,
+              prompts: true,
+              resources: true,
+            },
+          },
+        });
+        return;
+      }
 
       if (body.method === "tools/call" && body.params?.name) {
         const handler = registry.tools.get(body.params.name);

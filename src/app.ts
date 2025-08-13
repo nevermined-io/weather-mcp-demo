@@ -24,6 +24,7 @@ export class WeatherMcpApp {
   private serverConfig: ServerConfig;
   private envConfig: EnvironmentConfig;
   private createServerInstance!: () => any;
+  private authenticateMeta!: (extra: any, method: string) => Promise<any>;
 
   constructor() {
     this.serverConfig = createServerConfig();
@@ -33,10 +34,12 @@ export class WeatherMcpApp {
 
     this.setupMiddleware();
     // Build server factory once at startup
-    this.createServerInstance = buildHighLevelServerFactory(
+    const factory = buildHighLevelServerFactory(
       this.serverConfig,
       this.envConfig
     );
+    this.createServerInstance = factory.createServerInstance;
+    this.authenticateMeta = factory.authenticateMeta;
     this.setupRoutes();
   }
 
@@ -48,7 +51,8 @@ export class WeatherMcpApp {
     setupHighLevelMcpRoutes(
       this.app,
       this.sessionManager,
-      this.createServerInstance
+      this.createServerInstance,
+      this.authenticateMeta
     );
 
     // Health check endpoint

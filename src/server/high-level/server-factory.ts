@@ -35,7 +35,7 @@ export function buildHighLevelServerFactory(
 
   const resourceTemplate = createWeatherResourceTemplate();
 
-  return function createServerInstance(): McpServer {
+  function createServerInstance(): McpServer {
     const server = new McpServer({
       name: serverConfig.serverName,
       version: serverConfig.version,
@@ -79,5 +79,28 @@ export function buildHighLevelServerFactory(
     );
 
     return server;
+  }
+
+  const authenticateMeta = async (extra: any, method: string) => {
+    const mcpAny = payments.mcp as any;
+    if (mcpAny && typeof mcpAny.authenticateMeta === "function") {
+      return mcpAny.authenticateMeta(extra, method);
+    }
+    // Fallback: just ensure Authorization is present to avoid exposing meta without token
+    const hasAuth = !!(
+      extra &&
+      extra.requestInfo &&
+      extra.requestInfo.headers &&
+      (extra.requestInfo.headers.authorization ||
+        (extra.requestInfo.headers as any).Authorization)
+    );
+    if (!hasAuth) {
+      throw Object.assign(new Error("Authorization required"), {
+        code: -32003,
+      });
+    }
+    return { ok: true } as any;
   };
+
+  return { createServerInstance, authenticateMeta };
 }

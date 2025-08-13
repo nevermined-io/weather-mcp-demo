@@ -63,6 +63,8 @@ export function buildLowLevelServerFactory(
     tools,
     resources,
     prompts,
+    authenticateMeta: (extra: any, method: string) =>
+      payments.mcp.authenticateMeta(extra, method),
     resourceTemplates: new Map([
       ["weather.today", createWeatherResourceTemplate()],
     ]),
