@@ -1,6 +1,12 @@
+[![banner](https://raw.githubusercontent.com/nevermined-io/assets/main/images/logo/banner_logo.png)](https://nevermined.io)
+
 ## Weather MCP (High-Level and Low-Level servers)
 
 Minimal MCP server exposing a `weather.today(city)` tool, a `weather://today/{city}` resource and a `weather.ensureCity` prompt. Includes both a High-Level server (SDK `McpServer` + Streamable HTTP) and a Low-Level server (manual JSON‑RPC routing) to demonstrate Nevermined Payments integration.
+
+### About this demo
+
+This repository is a reference/demo project used to test and validate the Model Context Protocol (MCP) integration inside Nevermined's TypeScript SDK `@nevermined-io/payments`. It showcases how to protect MCP tools, resources and prompts with the paywall, both in a High‑Level (SDK `McpServer` + Streamable HTTP) server and a Low‑Level JSON‑RPC server. It is intended for examples, local experimentation and integration tests, not as production‑ready code.
 
 ### Requirements
 
